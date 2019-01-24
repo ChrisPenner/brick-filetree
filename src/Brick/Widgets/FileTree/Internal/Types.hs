@@ -61,8 +61,8 @@ data FileTree a = FT
   }
 
 buildParent :: FilePath -> ValueLoader a -> SubTree a -> IO (FileTree a)
-buildParent p valLoader child = do
-  FT { context = (c :< ls), ..} <- newFileTree valLoader (takeDirectory p)
+buildParent p valLoader' child = do
+  FT { context = (c :< ls), ..} <- newFileTree valLoader' (takeDirectory p)
   let newChildren = fmap (replace p child) ls
   return $ FT {context = c :< newChildren, ..}
  where
@@ -75,27 +75,27 @@ buildParent p valLoader child = do
 -- filepath (dirs AND files). It will be called lazily using 'unsafeInterleaveIO'
 -- when the value itself is accessed (if ever).
 newFileTree :: ValueLoader a -> FilePath -> IO (FileTree a)
-newFileTree valLoader currentDir = do
+newFileTree valLoader' currentDir = do
   absRoot        <- makeAbsolute (normalise currentDir)
   (_ FT.:/ tree) <- FT.readDirectoryWithL (interleavedValLoader File) absRoot
   convert interleavedValLoader (takeDirectory absRoot) tree
-  where interleavedValLoader fk fp = unsafeInterleaveIO $ valLoader fk fp
+  where interleavedValLoader fk fp = unsafeInterleaveIO $ valLoader' fk fp
 
 convert
   :: forall a . ValueLoader a -> FilePath -> FT.DirTree a -> IO (FileTree a)
-convert valLoader root tree = do
+convert valLoader' root tree = do
   subTree <- go (normalise root) tree
   pure $ FT
     { parents   = []
     , selection = mempty
     , config    = defaultConfig
     , context   = subTree
-    , valLoader = valLoader
+    , valLoader = valLoader'
     }
  where
   go :: FilePath -> FT.DirTree a -> IO (SubTree a)
   go root' (FT.Failed { FT.name, FT.err }) = do
-    val <- valLoader Error name
+    val <- valLoader' Error name
     pure
       $  FC
            { name    = show err
@@ -117,7 +117,7 @@ convert valLoader root tree = do
       :< list name mempty 1
   go root' (FT.Dir path contents) = do
     let absPath = normalise (root' </> path)
-    val      <- valLoader Dir absPath
+    val      <- valLoader' Dir absPath
     children <- traverse (go absPath) contents
     pure
       $  FC
