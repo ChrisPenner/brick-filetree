@@ -70,6 +70,10 @@ buildParent p valLoader child = do
                                            | otherwise   = fc
 
 -- | Create a new 'FileTree' situated at the given 'FilePath'
+--
+-- The given 'ValueLoader' will be used to load additional context for each
+-- filepath (dirs AND files). It will be called lazily using 'unsafeInterleaveIO'
+-- when the value itself is accessed (if ever).
 newFileTree :: ValueLoader a -> FilePath -> IO (FileTree a)
 newFileTree valLoader currentDir = do
   absRoot        <- makeAbsolute (normalise currentDir)
@@ -112,12 +116,13 @@ convert valLoader root tree = do
            }
       :< list name mempty 1
   go root' (FT.Dir path contents) = do
-    val      <- valLoader Dir path
-    children <- traverse (go (root' </> path)) contents
+    let absPath = normalise (root' </> path)
+    val      <- valLoader Dir absPath
+    children <- traverse (go absPath) contents
     pure
       $  FC
            { name    = path <> "/"
-           , path    = normalise (root' </> path)
+           , path    = absPath
            , kind    = Dir
            , flagged = False
            , val     = val

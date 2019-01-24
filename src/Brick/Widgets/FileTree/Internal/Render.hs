@@ -29,6 +29,8 @@ import           Control.Comonad
 import           Data.Bool
 import qualified Data.Sequence                 as S
 
+-- | Custom rendering function for a file
+-- Note that the resulting widget must be exactly 1 row high.
 type CustomFCRender a = FileContext a -> Widget String
 
 -- | Flagged items are rendered with this attr
