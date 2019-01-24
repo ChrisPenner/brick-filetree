@@ -47,7 +47,7 @@ defaultConfig = Config {showSelection = True, previewDir = False}
 type SubTree = Cofree (GenericList String V.Vector) FileContext
 
 -- | Represents all the state required to interact with or display a filetree
-data FileTree = FZ
+data FileTree = FT
   { parents :: S.Seq SubTree
   , selection :: S.Set FilePath
   , context :: SubTree
@@ -56,9 +56,9 @@ data FileTree = FZ
 
 buildParent :: FilePath -> SubTree -> IO FileTree
 buildParent p child = do
-  FZ { context = (c :< ls), ..} <- newFileTree (takeDirectory p)
+  FT { context = (c :< ls), ..} <- newFileTree (takeDirectory p)
   let newChildren = fmap (replace p child) ls
-  return $ FZ {context = c :< newChildren, ..}
+  return $ FT {context = c :< newChildren, ..}
  where
   replace pth fc@((path -> pth') :< _) new | pth == pth' = new
                                            | otherwise   = fc
@@ -73,7 +73,7 @@ newFileTree currentDir = do
 convert :: FilePath -> FT.DirTree FilePath -> FileTree
 convert root tree =
   let subTree = go (normalise root) $ tree
-  in  FZ
+  in  FT
         { parents   = []
         , selection = mempty
         , config    = defaultConfig

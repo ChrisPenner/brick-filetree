@@ -52,7 +52,7 @@ renderHeader ((path -> p) :< _) =
   withAttr titleAttr (str $ p <> "/") <=> hBorder
 
 renderFileTree :: FileTree -> Widget String
-renderFileTree fz@(FZ { parents, context, config }) =
+renderFileTree fz@(FT { parents, context, config }) =
   (   renderHeader context
   <=> (renderParents parents <+> renderNode True context <+> previewW)
   <=> selectionW
@@ -72,7 +72,7 @@ selectionCacheKey :: String
 selectionCacheKey = "delve!selection"
 
 renderSelection :: FileTree -> Widget String
-renderSelection (FZ { selection })
+renderSelection (FT { selection })
   | null selection
   = emptyWidget
   | otherwise
