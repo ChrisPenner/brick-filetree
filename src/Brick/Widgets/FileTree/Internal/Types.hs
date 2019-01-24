@@ -44,6 +44,7 @@ defaultConfig = Config {showSelection = True, previewDir = False}
 
 type SubTree = Cofree (GenericList String V.Vector) FileContext
 
+-- | Represents all the state required to interact with or display a filetree
 data FileTree = FZ
   { parents :: S.Seq SubTree
   , selection :: S.Set FilePath
@@ -60,6 +61,7 @@ buildParent p child = do
   replace pth fc@((path -> pth') :< _) new | pth == pth' = new
                                            | otherwise   = fc
 
+-- | Create a new 'FileTree' situated at the given 'FilePath'
 newFileTree :: FilePath -> IO FileTree
 newFileTree currentDir = do
   absRoot        <- makeAbsolute (normalise currentDir)

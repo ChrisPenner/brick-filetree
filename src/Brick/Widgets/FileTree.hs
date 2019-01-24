@@ -1,22 +1,34 @@
 module Brick.Widgets.FileTree
-  ( FileTree
+  (
+  -- * Types
+  FileTree
+
+  -- Initialization
   , newFileTree
-  , toggleSelection
+
+  -- * Interaction
   , moveUp
   , moveDown
-  , pageDown
   , pageUp
+  , pageDown
   , moveToTop
   , moveToBottom
   , ascendDir
   , descendDir
+  , toggleFlagged
+  , toggleFlaggedVisible
+
+  -- * Queries
   , getCurrentFilePath
   , getCurrentDir
   , getFlagged
-  , toggleSelectionVisible
+
+  -- * Rendering
   , renderFileTree
   , renderSelection
-  , selectedItemAttr
+
+  -- ** Attributes
+  , flaggedItemAttr
   , titleAttr
   , dirAttr
   , fileAttr

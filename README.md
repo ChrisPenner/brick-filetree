@@ -6,3 +6,11 @@
 [![Stackageetree
 Nightly](http://stackage.org/package/brick-fil/badge/nightly)](http://stackage.org/nightly/package/brick-filetree)
 [![Build status](https://secure.travis-ci.org/ChrisPenner/brick-filetree.svg)](https://travis-ci.org/ChrisPenner/brick-filetree)
+
+---
+
+A brick widget for exploring file trees.
+
+See [Hackage](https://hackage.haskell.org/package/brick-filetree) for docs.
+
+[![asciicast](https://asciinema.org/a/BegqABw8NlGfEJqFfbOIVVozr.svg)](https://asciinema.org/a/BegqABw8NlGfEJqFfbOIVVozr)

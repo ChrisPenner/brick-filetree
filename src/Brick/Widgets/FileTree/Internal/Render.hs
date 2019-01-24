@@ -2,7 +2,7 @@
 {-# LANGUAGE ViewPatterns #-}
 {-# LANGUAGE OverloadedStrings #-}
 module Brick.Widgets.FileTree.Internal.Render
-  ( selectedItemAttr
+  ( flaggedItemAttr
   , titleAttr
   , dirAttr
   , fileAttr
@@ -28,11 +28,20 @@ import           Control.Comonad
 import           Data.Bool
 import qualified Data.Sequence                 as S
 
-selectedItemAttr, titleAttr, dirAttr, fileAttr, errorAttr :: AttrName
-selectedItemAttr = "selectedItemAttr"
+-- | Flagged items are rendered with this attr
+flaggedItemAttr :: AttrName
+flaggedItemAttr = "flaggedItemAttr"
+-- | UI Titles have this attr
+titleAttr :: AttrName
 titleAttr = "titleAttr"
+-- | Directories in the list have this attr
+dirAttr :: AttrName
 dirAttr = "dirAttr"
+-- | Files in the list have this attr
+fileAttr :: AttrName
 fileAttr = "fileAttr"
+-- | Errors have this attr
+errorAttr :: AttrName
 errorAttr = "errorAttr"
 
 cacheKey :: FileContext -> String
@@ -68,7 +77,7 @@ renderSelection (FZ { selection })
   = let selectionsW =
           cached selectionCacheKey
             . vBox
-            . fmap (withAttr selectedItemAttr . str)
+            . fmap (withAttr flaggedItemAttr . str)
             . toList
             $ selection
     in  hBorder <=> withAttr titleAttr (str "Selected") <=> selectionsW
@@ -94,11 +103,11 @@ renderParent = (<+> vBorder) . hLimit 20 . renderNode
 renderFileContext :: FileContext -> Widget String
 renderFileContext (FC { kind = File, name, selected }) =
   let (attr', modStr) =
-        if selected then (selectedItemAttr, "* ") else (fileAttr, "")
+        if selected then (flaggedItemAttr, "* ") else (fileAttr, "")
   in  withAttr attr' . str $ modStr <> name
 renderFileContext (FC { kind = Error, name, path }) =
   withAttr errorAttr . str $ "! " <> path <> ": " <> name
 renderFileContext (FC { kind = Dir, name, selected }) =
   let (attr', modStr) =
-        if selected then (selectedItemAttr, "* ") else (dirAttr, "")
+        if selected then (flaggedItemAttr, "* ") else (dirAttr, "")
   in  withAttr attr' . str $ modStr <> name <> "/"

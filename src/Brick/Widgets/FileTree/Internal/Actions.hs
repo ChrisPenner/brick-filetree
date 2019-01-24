@@ -15,9 +15,9 @@ module Brick.Widgets.FileTree.Internal.Actions
   , descendDir
   , getCurrentFilePath
   , getCurrentDir
-  , toggleSelection
+  , toggleFlagged
   , getFlagged
-  , toggleSelectionVisible
+  , toggleFlaggedVisible
   ) where
 
 import qualified Graphics.Vty.Input as V
@@ -45,24 +45,31 @@ overCurrentList f fz@(FZ { context = x :< lst }) = do
 pressKey :: V.Key -> (FileTree -> EventM String FileTree)
 pressKey k = overCurrentList (handleListEvent (V.EvKey k []))
 
+-- | Move the cursor down one item
 moveDown :: FileTree -> EventM String FileTree
 moveDown = pressKey V.KDown
 
+-- | Move the cursor up one item
 moveUp :: FileTree -> EventM String FileTree
 moveUp = pressKey V.KUp
 
+-- | Move the cursor down a page
 pageDown :: FileTree -> EventM String FileTree
 pageDown = pressKey V.KPageDown
 
+-- | Move the cursor up a page
 pageUp :: FileTree -> EventM String FileTree
 pageUp = pressKey V.KPageDown
 
+-- | Move the cursor the the top of the file list
 moveToTop :: FileTree -> EventM String FileTree
 moveToTop = pressKey V.KHome
 
+-- | Move the cursor the the bottom of the file list
 moveToBottom :: FileTree -> EventM String FileTree
 moveToBottom = pressKey V.KEnd
 
+-- | Move the cursor up a directory in the file tree
 ascendDir :: FileTree -> EventM String FileTree
 ascendDir (FZ { parents = Seq.Empty, context = tree@((extract -> path -> p)), selection, ..})
   = do
@@ -73,6 +80,8 @@ ascendDir (FZ { parents = (ps Seq.:|> (f :< pList)), context, ..}) = do
   return
     $ FZ {parents = ps, context = (f :< listModify (const context) pList), ..}
 
+-- | If the cursor is on a directory then descend the cursor into that dir
+-- If the cursor is on a file nothing happens
 descendDir :: FileTree -> EventM String FileTree
 descendDir fz@(FZ { parents, context = (f :< children), ..}) = do
   invalidateCacheEntry (cacheKey f)
@@ -85,6 +94,7 @@ descendDir fz@(FZ { parents, context = (f :< children), ..}) = do
       }
     Just _ -> fz
 
+-- | Get the absolute path of the object (dir or file) under the cursor 
 getCurrentFilePath :: FileTree -> Maybe FilePath
 getCurrentFilePath (FZ { context = unwrap -> children }) =
   case listSelectedElement children of
@@ -92,11 +102,13 @@ getCurrentFilePath (FZ { context = unwrap -> children }) =
     Just (_, FC { kind = Error } :< _) -> Nothing
     Just (_, fc :< _                 ) -> Just (path fc)
 
+-- | Get the absolute path of the directory where the cursor currently is.
 getCurrentDir :: FileTree -> FilePath
 getCurrentDir (FZ { context = extract -> path -> p }) = p
 
-toggleSelection :: FileTree -> EventM String FileTree
-toggleSelection fz@(FZ { context = (fc :< lst), selection, ..}) = do
+-- | Flag or unflag the current file or dir
+toggleFlagged :: FileTree -> EventM String FileTree
+toggleFlagged fz@(FZ { context = (fc :< lst), selection, ..}) = do
   invalidateCacheEntry selectionCacheKey
   return . fromMaybe fz $ do
     ((selectedContext@FC { selected = isSelected, path }) :< rest) <- snd
@@ -109,9 +121,11 @@ toggleSelection fz@(FZ { context = (fc :< lst), selection, ..}) = do
           lst
     return $ FZ {context = (fc :< newList), selection = newSelection, ..}
 
+-- | Get all flagged file paths. All paths are absolute
 getFlagged :: FileTree -> [FilePath]
 getFlagged = toList . selection
 
-toggleSelectionVisible :: FileTree -> FileTree
-toggleSelectionVisible fz@(FZ { config }) =
+-- | Hide/Show a list of all flagged files
+toggleFlaggedVisible :: FileTree -> FileTree
+toggleFlaggedVisible fz@(FZ { config }) =
   fz { config = config { showSelection = not $ showSelection config } }
