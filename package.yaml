@@ -23,6 +23,13 @@ dependencies:
 - base >= 4.7 && < 5
 - containers
 - brick
+- vector
+- filepath
+- free
+- directory-tree
+- directory
+- comonad
+- vty
 
 library:
   source-dirs: src
