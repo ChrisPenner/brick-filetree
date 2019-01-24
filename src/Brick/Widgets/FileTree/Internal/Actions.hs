@@ -35,45 +35,45 @@ import Control.Comonad
 import Data.Maybe
 
 overCurrentList
-  :: (List String SubTree -> EventM String (List String SubTree))
-  -> FileTree
-  -> EventM String FileTree
+  :: (List String (SubTree a) -> EventM String (List String (SubTree a)))
+  -> FileTree a
+  -> EventM String (FileTree a)
 overCurrentList f fz@(FT { context = x :< lst }) = do
   newLst <- f lst
   return fz { context = x :< newLst }
 
-pressKey :: V.Key -> (FileTree -> EventM String FileTree)
+pressKey :: V.Key -> (FileTree a -> EventM String (FileTree a))
 pressKey k = overCurrentList (handleListEvent (V.EvKey k []))
 
 -- | Move the cursor down one item
-moveDown :: FileTree -> EventM String FileTree
+moveDown :: FileTree a -> EventM String (FileTree a)
 moveDown = pressKey V.KDown
 
 -- | Move the cursor up one item
-moveUp :: FileTree -> EventM String FileTree
+moveUp :: FileTree a -> EventM String (FileTree a)
 moveUp = pressKey V.KUp
 
 -- | Move the cursor down a page
-pageDown :: FileTree -> EventM String FileTree
+pageDown :: FileTree a -> EventM String (FileTree a)
 pageDown = pressKey V.KPageDown
 
 -- | Move the cursor up a page
-pageUp :: FileTree -> EventM String FileTree
+pageUp :: FileTree a -> EventM String (FileTree a)
 pageUp = pressKey V.KPageDown
 
 -- | Move the cursor the the top of the file list
-moveToTop :: FileTree -> EventM String FileTree
+moveToTop :: FileTree a -> EventM String (FileTree a)
 moveToTop = pressKey V.KHome
 
 -- | Move the cursor the the bottom of the file list
-moveToBottom :: FileTree -> EventM String FileTree
+moveToBottom :: FileTree a -> EventM String (FileTree a)
 moveToBottom = pressKey V.KEnd
 
 -- | Move the cursor up a directory in the file tree
-ascendDir :: FileTree -> EventM String FileTree
-ascendDir (FT { parents = Seq.Empty, context = tree@((extract -> path -> p)), selection, ..})
+ascendDir :: FileTree a -> EventM String (FileTree a)
+ascendDir (FT { parents = Seq.Empty, context = tree@((extract -> path -> p)), selection, valLoader, ..})
   = do
-    fz <- liftIO $ buildParent p tree
+    fz <- liftIO $ buildParent p valLoader tree
     return $ fz { selection = selection }
 ascendDir (FT { parents = (ps Seq.:|> (f :< pList)), context, ..}) = do
   invalidateCacheEntry (cacheKey f)
@@ -82,7 +82,7 @@ ascendDir (FT { parents = (ps Seq.:|> (f :< pList)), context, ..}) = do
 
 -- | If the cursor is on a directory then descend the cursor into that dir
 -- If the cursor is on a file nothing happens
-descendDir :: FileTree -> EventM String FileTree
+descendDir :: FileTree a -> EventM String (FileTree a)
 descendDir fz@(FT { parents, context = (f :< children), ..}) = do
   invalidateCacheEntry (cacheKey f)
   return $ case listSelectedElement children of
@@ -95,7 +95,7 @@ descendDir fz@(FT { parents, context = (f :< children), ..}) = do
     Just _ -> fz
 
 -- | Get the absolute path of the object (dir or file) under the cursor 
-getCurrentFilePath :: FileTree -> Maybe FilePath
+getCurrentFilePath :: FileTree a -> Maybe FilePath
 getCurrentFilePath (FT { context = unwrap -> children }) =
   case listSelectedElement children of
     Nothing                            -> Nothing
@@ -103,29 +103,29 @@ getCurrentFilePath (FT { context = unwrap -> children }) =
     Just (_, fc :< _                 ) -> Just (path fc)
 
 -- | Get the absolute path of the directory where the cursor currently is.
-getCurrentDir :: FileTree -> FilePath
+getCurrentDir :: FileTree a -> FilePath
 getCurrentDir (FT { context = extract -> path -> p }) = p
 
 -- | Flag or unflag the current file or dir
-toggleFlagged :: FileTree -> EventM String FileTree
+toggleFlagged :: FileTree a -> EventM String (FileTree a)
 toggleFlagged fz@(FT { context = (fc :< lst), selection, ..}) = do
   invalidateCacheEntry selectionCacheKey
   return . fromMaybe fz $ do
-    ((selectedContext@FC { selected = isSelected, path }) :< rest) <- snd
+    ((selectedContext@FC { flagged = isSelected, path }) :< rest) <- snd
       <$> listSelectedElement lst
     let newSelection = if isSelected
           then S.delete path selection
           else S.insert path selection
     let newList = listModify
-          (const (selectedContext { selected = not isSelected } :< rest))
+          (const (selectedContext { flagged = not isSelected } :< rest))
           lst
     return $ FT {context = (fc :< newList), selection = newSelection, ..}
 
 -- | Get all flagged file paths. All paths are absolute
-getFlagged :: FileTree -> [FilePath]
+getFlagged :: FileTree a -> [FilePath]
 getFlagged = toList . selection
 
 -- | Hide/Show a list of all flagged files
-toggleFlaggedVisible :: FileTree -> FileTree
+toggleFlaggedVisible :: FileTree a -> FileTree a
 toggleFlaggedVisible fz@(FT { config }) =
   fz { config = config { showSelection = not $ showSelection config } }

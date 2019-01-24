@@ -2,6 +2,12 @@ module Brick.Widgets.FileTree
   (
   -- * Types
   FileTree
+  , FileContext
+  , flagged
+  , val
+  , path
+  , name
+  , kind
 
   -- Initialization
   , newFileTree
@@ -25,7 +31,8 @@ module Brick.Widgets.FileTree
 
   -- * Rendering
   , renderFileTree
-  , renderSelection
+  , renderFileTreeCustom
+  , renderFileContext
 
   -- ** Attributes
   , flaggedItemAttr

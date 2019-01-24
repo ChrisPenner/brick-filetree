@@ -10,8 +10,9 @@ module Brick.Widgets.FileTree.Internal.Render
   , cacheKey
   , renderHeader
   , renderFileTree
+  , renderFileTreeCustom
   , selectionCacheKey
-  , renderSelection
+  , renderFileContext
   )
 where
 
@@ -27,6 +28,8 @@ import           Control.Comonad.Cofree        as CF
 import           Control.Comonad
 import           Data.Bool
 import qualified Data.Sequence                 as S
+
+type CustomFCRender a = FileContext a -> Widget String
 
 -- | Flagged items are rendered with this attr
 flaggedItemAttr :: AttrName
@@ -44,34 +47,42 @@ fileAttr = "fileAttr"
 errorAttr :: AttrName
 errorAttr = "errorAttr"
 
-cacheKey :: FileContext -> String
+cacheKey :: FileContext a -> String
 cacheKey = path
 
-renderHeader :: SubTree -> Widget String
+renderHeader :: SubTree a -> Widget String
 renderHeader ((path -> p) :< _) =
   withAttr titleAttr (str $ p <> "/") <=> hBorder
 
-renderFileTree :: FileTree -> Widget String
-renderFileTree fz@(FT { parents, context, config }) =
+renderFileTreeCustom :: CustomFCRender a -> FileTree a -> Widget String
+renderFileTreeCustom customFCRender fz@(FT { parents, context, config }) =
   (   renderHeader context
-  <=> (renderParents parents <+> renderNode True context <+> previewW)
+  <=> (   renderParents customFCRender parents
+      <+> renderNode customFCRender True context
+      <+> previewW
+      )
   <=> selectionW
   )
  where
   selectionW = if showSelection config then renderSelection fz else emptyWidget
-  previewW   = if previewDir config then renderPreview context else emptyWidget
+  previewW   = if previewDir config
+    then renderPreview customFCRender context
+    else emptyWidget
 
-renderPreview :: SubTree -> Widget String
-renderPreview (_ :< lst) = do
+renderFileTree :: FileTree a -> Widget String
+renderFileTree = renderFileTreeCustom renderFileContext
+
+renderPreview :: CustomFCRender a -> SubTree a -> Widget String
+renderPreview customFCRender (_ :< lst) = do
   case listSelectedElement lst of
     Just (_, node@(FC { kind = Dir } :< _)) ->
-      vBorder <+> renderNode False node
+      vBorder <+> renderNode customFCRender False node
     _ -> emptyWidget
 
 selectionCacheKey :: String
 selectionCacheKey = "delve!selection"
 
-renderSelection :: FileTree -> Widget String
+renderSelection :: FileTree a -> Widget String
 renderSelection (FT { selection })
   | null selection
   = emptyWidget
@@ -82,34 +93,35 @@ renderSelection (FT { selection })
             . fmap (withAttr flaggedItemAttr . str)
             . toList
             $ selection
-    in  hBorder <=> withAttr titleAttr (str "Selected") <=> selectionsW
+    in  hBorder <=> withAttr titleAttr (str "flagged") <=> selectionsW
 
-renderParents :: S.Seq SubTree -> Widget String
-renderParents S.Empty                    = emptyWidget
-renderParents parents@(_ S.:|> (p :< _)) = cached
+renderParents :: CustomFCRender a -> S.Seq (SubTree a) -> Widget String
+renderParents _              S.Empty                    = emptyWidget
+renderParents customFCRender parents@(_ S.:|> (p :< _)) = cached
   (cacheKey p)
-  (hBox . toList $ (renderParent <$> S.drop ind parents))
+  (hBox . toList $ (renderParent customFCRender <$> S.drop ind parents))
  where
   len = S.length parents
   ind = max 0 (len - 2)
 
-renderNode :: Bool -> SubTree -> Widget String
-renderNode focused (_ :< ls) = renderList
-  (\b -> bool id (forceAttr listSelectedAttr) b . renderFileContext . extract)
+renderNode :: CustomFCRender a -> Bool -> SubTree a -> Widget String
+renderNode customFCRender focused (_ :< ls) = renderList
+  (\b -> bool id (forceAttr listSelectedAttr) b . customFCRender . extract)
   focused
   ls
 
-renderParent :: SubTree -> Widget String
-renderParent = (<+> vBorder) . hLimit 20 . renderNode False
+renderParent :: CustomFCRender a -> SubTree a -> Widget String
+renderParent customFCRender =
+  (<+> vBorder) . hLimit 20 . renderNode customFCRender False
 
-renderFileContext :: FileContext -> Widget String
-renderFileContext (FC { kind = File, name, selected }) =
+renderFileContext :: FileContext a -> Widget String
+renderFileContext (FC { kind = File, name, flagged }) =
   let (attr', modStr) =
-        if selected then (flaggedItemAttr, "* ") else (fileAttr, "")
+        if flagged then (flaggedItemAttr, "* ") else (fileAttr, "")
   in  withAttr attr' . str $ modStr <> name
 renderFileContext (FC { kind = Error, name, path }) =
   withAttr errorAttr . str $ "! " <> path <> ": " <> name
-renderFileContext (FC { kind = Dir, name, selected }) =
+renderFileContext (FC { kind = Dir, name, flagged }) =
   let (attr', modStr) =
-        if selected then (flaggedItemAttr, "* ") else (dirAttr, "")
+        if flagged then (flaggedItemAttr, "* ") else (dirAttr, "")
   in  withAttr attr' . str $ modStr <> name
