@@ -48,12 +48,13 @@ cacheKey :: FileContext -> String
 cacheKey = path
 
 renderHeader :: SubTree -> Widget String
-renderHeader ((path -> p) :< _) = withAttr titleAttr (str p) <=> hBorder
+renderHeader ((path -> p) :< _) =
+  withAttr titleAttr (str $ p <> "/") <=> hBorder
 
 renderFileTree :: FileTree -> Widget String
 renderFileTree fz@(FZ { parents, context, config }) =
   (   renderHeader context
-  <=> (renderParents parents <+> renderNode context <+> previewW)
+  <=> (renderParents parents <+> renderNode True context <+> previewW)
   <=> selectionW
   )
  where
@@ -63,7 +64,8 @@ renderFileTree fz@(FZ { parents, context, config }) =
 renderPreview :: SubTree -> Widget String
 renderPreview (_ :< lst) = do
   case listSelectedElement lst of
-    Just (_, node@(FC { kind = Dir } :< _)) -> vBorder <+> renderNode node
+    Just (_, node@(FC { kind = Dir } :< _)) ->
+      vBorder <+> renderNode False node
     _ -> emptyWidget
 
 selectionCacheKey :: String
@@ -91,14 +93,14 @@ renderParents parents@(_ S.:|> (p :< _)) = cached
   len = S.length parents
   ind = max 0 (len - 2)
 
-renderNode :: SubTree -> Widget String
-renderNode (_ :< ls) = renderList
+renderNode :: Bool -> SubTree -> Widget String
+renderNode focused (_ :< ls) = renderList
   (\b -> bool id (forceAttr listSelectedAttr) b . renderFileContext . extract)
-  True
+  focused
   ls
 
 renderParent :: SubTree -> Widget String
-renderParent = (<+> vBorder) . hLimit 20 . renderNode
+renderParent = (<+> vBorder) . hLimit 20 . renderNode False
 
 renderFileContext :: FileContext -> Widget String
 renderFileContext (FC { kind = File, name, selected }) =
@@ -110,4 +112,4 @@ renderFileContext (FC { kind = Error, name, path }) =
 renderFileContext (FC { kind = Dir, name, selected }) =
   let (attr', modStr) =
         if selected then (flaggedItemAttr, "* ") else (dirAttr, "")
-  in  withAttr attr' . str $ modStr <> name <> "/"
+  in  withAttr attr' . str $ modStr <> name

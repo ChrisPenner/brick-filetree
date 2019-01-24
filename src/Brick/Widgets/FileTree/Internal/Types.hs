@@ -99,7 +99,7 @@ convert root tree =
       :< list name mempty 1
   go root' (FT.Dir path contents) =
     FC
-        { name     = path
+        { name     = path <> "/"
         , path     = normalise (root' </> path)
         , kind     = Dir
         , selected = False
