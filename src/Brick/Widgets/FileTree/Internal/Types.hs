@@ -22,8 +22,10 @@ import qualified Data.Sequence                 as S
 import           System.FilePath.Posix
 import           System.Directory
 import qualified Data.Set                      as S
+import Data.List
 
 data FileKind = Dir | File | Error
+  deriving (Eq, Ord, Show)
 
 data FileContext =
   FC
@@ -102,4 +104,14 @@ convert root tree =
         , kind     = Dir
         , selected = False
         }
-      :< list path (V.fromList . fmap (go (root' </> path)) $ contents) 1
+      :< list
+           path
+           ( V.fromList
+           . sortOn byFileType
+           . fmap (go (root' </> path))
+           $ contents
+           )
+           1
+
+byFileType :: SubTree -> (FileKind, String)
+byFileType (FC { kind, name } :< _) = (kind, name)
