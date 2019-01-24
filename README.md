@@ -13,4 +13,4 @@ A brick widget for exploring file trees.
 
 See [Hackage](https://hackage.haskell.org/package/brick-filetree) for docs.
 
-[![asciicast](https://asciinema.org/a/BegqABw8NlGfEJqFfbOIVVozr.svg)](https://asciinema.org/a/BegqABw8NlGfEJqFfbOIVVozr)
+![screencast](./screencast.gif)
